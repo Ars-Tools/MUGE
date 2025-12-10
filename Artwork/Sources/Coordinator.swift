@@ -22,6 +22,7 @@ final class Coordinator {
         }
         signal = .init()
         screen = .init()
+        screen.framebufferOnly = false
         screen.device = screen.preferredDevice ?? MTLCreateSystemDefaultDevice()
         kernel = try artwork(as: screen.pixelFormat, in: screen.residencySet, signal: signal)
         screen.residencySet.commit()
