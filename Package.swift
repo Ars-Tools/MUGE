@@ -17,12 +17,12 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/Ars-Tools/fcikernel", from: .init(0, 0, 0))
+        .package(url: "https://github.com/Ars-Tools/fcikernel", from: .init(0, 0, 1))
     ],
     targets: [
         .executableTarget(
             name: "Artwork-Preview",
-            dependencies: ["Artwork", "CIArtwork", "Procedure"],
+            dependencies: ["Artwork", "AVArtwork", "CIArtwork", "CGArtwork", "Procedural"],
             path: "Artwork/Preview"
         ),
         .target(
@@ -30,14 +30,25 @@ let package = Package(
             path: "Artwork/Sources"
         ),
         .target(
-            name: "CIArtwork",
-            dependencies: ["Artwork"],
-            path: "CIArtwork/Sources"
+            name: "AVArtwork",
+            dependencies: ["Artwork", "CIArtwork"],
+            path: "AVArtwork/Sources"
         ),
         .target(
-            name: "Procedure",
+            name: "CIArtwork",
             dependencies: ["Artwork"],
-            path: "Procedure/Sources"
+            path: "CIArtwork/Sources",
+            plugins: [.plugin(name: "ci.metal", package: "fcikernel")]
+        ),
+        .target(
+            name: "CGArtwork",
+            dependencies: ["Artwork", "CIArtwork"],
+            path: "CGArtwork/Sources"
+        ),
+        .target(
+            name: "Procedural",
+            dependencies: ["Artwork"],
+            path: "Procedural/Sources"
         )
     ]
 )
