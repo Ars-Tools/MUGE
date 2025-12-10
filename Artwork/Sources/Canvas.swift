@@ -7,6 +7,7 @@
 @preconcurrency import typealias Combine.PassthroughSubject
 @preconcurrency import SwiftUI
 @preconcurrency import os.log
+import simd
 @usableFromInline
 struct Canvas {
     @usableFromInline let artwork: Artwork
@@ -16,43 +17,43 @@ struct Canvas {
     }
 }
 #if canImport(UIKit)
-@usableFromInline
-final class MTLViewController: UIViewController {
-    @usableFromInline var link: Optional<CAMetalDisplayLink> = .none
-    @usableFromInline var draw: Optional<(@Sendable (CFTimeInterval, CAMetalDrawable) -> Void)> = .none
-    @inlinable
-    override func loadView() {
-        view = MTLView()
-        link = (view.layer as?CAMetalLayer).map(CAMetalDisplayLink.init(metalLayer:))
-        link?.delegate = self // weak ref
-    }
-    @inlinable
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        link?.add(to: .main, forMode: .default)
-    }
-    @inlinable
-    override func viewWillDisappear(_ animated: Bool) {
-        link?.remove(from: .main, forMode: .default)
-        super.viewWillDisappear(animated)
-    }
-}
-extension Canvas: UIViewControllerRepresentable {
-    @usableFromInline
-    func makeUIViewController(context: Context) -> MTLViewController {
-        let controller = MTLViewController()
-        do {
-            try controller.setup(with: artwork)
-        } catch {
-            os_log(.error, log: .default, "%{public}@", String(describing: error))
-        }
-        return controller
-    }
-    @inlinable
-    func updateUIViewController(_ nsViewController: MTLViewController, context: Context) {
-        
-    }
-}
+//@usableFromInline
+//final class MTLViewController: UIViewController {
+//    @usableFromInline var link: Optional<CAMetalDisplayLink> = .none
+//    @usableFromInline var draw: Optional<(@Sendable (CFTimeInterval, CAMetalDrawable) -> Void)> = .none
+//    @inlinable
+//    override func loadView() {
+//        view = MTLView()
+//        link = (view.layer as?CAMetalLayer).map(CAMetalDisplayLink.init(metalLayer:))
+//        link?.delegate = self // weak ref
+//    }
+//    @inlinable
+//    override func viewDidAppear(_ animated: Bool) {
+//        super.viewDidAppear(animated)
+//        link?.add(to: .main, forMode: .default)
+//    }
+//    @inlinable
+//    override func viewWillDisappear(_ animated: Bool) {
+//        link?.remove(from: .main, forMode: .default)
+//        super.viewWillDisappear(animated)
+//    }
+//}
+//extension Canvas: UIViewControllerRepresentable {
+//    @usableFromInline
+//    func makeUIViewController(context: Context) -> MTLViewController {
+//        let controller = MTLViewController()
+//        do {
+//            try controller.setup(with: artwork)
+//        } catch {
+//            os_log(.error, log: .default, "%{public}@", String(describing: error))
+//        }
+//        return controller
+//    }
+//    @inlinable
+//    func updateUIViewController(_ nsViewController: MTLViewController, context: Context) {
+//        
+//    }
+//}
 #else
 @usableFromInline
 final class MTLViewController: NSViewController {
@@ -113,8 +114,17 @@ extension Canvas: NSViewControllerRepresentable {
     func updateNSViewController(_ nsViewController: MTLViewController, context: Context) {
         
     }
+    @inlinable
+    func sizeThatFits(_ proposal: ProposedViewSize, nsViewController: MTLViewController, context: Context) -> CGSize? {
+        guard case.some(let width) = proposal.width, 0 < width, case.some(let height) = proposal.height, 0 < height else {
+            return.none
+        }
+        context.coordinator.screen.drawableSize = .init(width: width, height: height)
+        print(context.coordinator.screen.drawableSize)
+        return.some(context.coordinator.screen.drawableSize)
+    }
 }
 #endif
-public func Exhibit(artwork: some Artwork) -> some SwiftUI.View {
+public func Exhibit(artwork: Artwork) -> some SwiftUI.View {
     Canvas(artwork: artwork)
 }
