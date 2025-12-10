@@ -4,32 +4,54 @@
 //
 //  Created by Kota on 12/3/25.
 //
-import protocol SwiftUI.Gesture
+@_exported @preconcurrency import CoreImage
+@_exported @preconcurrency import CoreImage.CIFilterBuiltins
 @preconcurrency import protocol Combine.Publisher
-@preconcurrency import CoreImage
 import Artwork
 import os.log
 public protocol CIArtwork: Artwork {
-    var outputImage: Optional<CIImage> { get }
+    func ciImage(at: CFTimeInterval) -> Optional<CIImage>
 }
 extension CIArtwork where Self: Sendable {
     public func callAsFunction(as format: MTLPixelFormat, in residency: MTLResidencySet, signal: some Publisher<(SIMD2<Float64>, Gesture), Never>) throws -> @Sendable (CFTimeInterval, MTL4CommandBuffer, MTLTexture) -> Void {
-        let ctx = CIContext(mtlDevice: residency.device)
-        return switch outputImage {
-        case.some(let image):
-            {
+        let device = residency.device
+        let fence = device.makeFence().unsafelyUnwrapped
+        let mtlCommandQueue = device.makeCommandQueue().unsafelyUnwrapped
+        let ciContext = CIContext(mtlCommandQueue: mtlCommandQueue)
+        return {
+            switch ciImage(at: $0) {
+            case.some(let image):
                 do {
-                    try ctx.startTask(toRender: image, to: .init(mtlTexture: $2, commandBuffer: .none))
+                    let mtlCommandBuffer = mtlCommandQueue.makeCommandBuffer()
+                    try ciContext.startTask(toRender: image,
+                                            to: .init(mtlTexture: $2, commandBuffer: mtlCommandBuffer))
+                    let encoder = mtlCommandBuffer?.makeBlitCommandEncoder()
+                    encoder?.synchronize(resource: $2)
+                    encoder?.updateFence(fence)
+                    encoder?.endEncoding()
+                    mtlCommandBuffer?.commit()
                 } catch {
-                    
+                    return
                 }
+                do {
+                    let encoder = $1.makeComputeCommandEncoder()
+                    encoder?.waitForFence(fence, beforeEncoderStages: .blit)
+                    encoder?.optimizeContents(forGPUAccess: $2)
+                    encoder?.endEncoding()
+                }
+            case.none:
+                break
             }
-        case.none:
-            fatalError()
         }
     }
 }
-extension CIFilter: CIArtwork {}
 extension CIImage: CIArtwork {
-    public var outputImage: Optional<CIImage> { .some(self) }
+    public func ciImage(at: CFTimeInterval) -> Optional<CIImage> {
+        .some(self)
+    }
+}
+extension CIFilter: CIArtwork {
+    public func ciImage(at: CFTimeInterval) -> Optional<CIImage> {
+        outputImage
+    }
 }
