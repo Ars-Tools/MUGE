@@ -13,7 +13,11 @@ let package = Package(
     products: [
         .library(
             name: "MUGE.Artwork",
-            targets: ["Artwork"]
+            targets: ["Artwork", "AVArtwork", "CIArtwork", "CGArtwork"]
+        ),
+        .library(
+            name: "MUGE.Procedural",
+            targets: ["Procedural"]
         ),
     ],
     dependencies: [
