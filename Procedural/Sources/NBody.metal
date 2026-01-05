@@ -28,15 +28,15 @@ void nbody2Dc(float device * const px [[ buffer(0) ]],
         uint const o = m * N;
         uint const n = t % N;
         float2 const p(px[n+o], py[n+o]);
-        float2 a = -0.99 * p;
+        float2 a = -p;
         for ( uint k = 0 ; k < M ; ++ k ) if ( k != m ) {
             float2 const q(px[n + k * N], py[n + k * N]);
             float2 const d = q - p;
-            float const l = max(length(d), 1e-3);
+            float const l = max(length(d), 1e-6);
             a += Gf * mm[k] * d / l / l / l;
         }
-        vx[m] = 0.99 * vx[m] + dt * a.x;
-        vy[m] = 0.99 * vy[m] + dt * a.y;
+        vx[m] = vx[m] + dt * a.x;
+        vy[m] = vy[m] + dt * a.y;
         px[(t+1)%N + o] = px[n+o] + dt * vx[m];
         py[(t+1)%N + o] = py[n+o] + dt * vy[m];
     }
