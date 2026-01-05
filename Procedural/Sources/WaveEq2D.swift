@@ -43,7 +43,6 @@ extension WaveEq2D: MTLArtwork {
         fieldDescriptor.pixelFormat = .r32Float
         fieldDescriptor.usage = [.shaderRead, .shaderWrite]
         fieldDescriptor.arrayLength = 24
-        let count = Atomic<Int>(.zero)
         let field = device.makeTexture(descriptor: fieldDescriptor).unsafelyUnwrapped
         let store = signal.sink {
             switch $1 {
@@ -86,7 +85,11 @@ extension WaveEq2D: MTLArtwork {
         let threadsPerThreadgroup = MTLSize(width: 32, height: 32, depth: 1)
         let threadgroupsPerGrid = MTLSize(width: (size.x + 31) / 32, height: (size.y + 31) / 32, depth: 1)
         
-        return (fieldDescriptor, {
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .r32Float,
+                                                                  width: size.x,
+                                                                  height: size.y,
+                                                                  mipmapped: false)
+        return (descriptor, {
             let encoder = $1.makeComputeCommandEncoder()
             encoder?.setComputePipelineState(state)
             for table in table {
@@ -100,11 +103,14 @@ extension WaveEq2D: MTLArtwork {
             }
             encoder?.endEncoding()
             return withExtendedLifetime(store) {
-                field.makeTextureView(pixelFormat: .r32Float,
-                                      textureType: .type2D,
+                field.makeTextureView(pixelFormat: descriptor.pixelFormat,
+                                      textureType: descriptor.textureType,
                                       levels: 0..<1,
                                       slices: 0..<1,
-                                      swizzle: .init(red: .red, green: .red, blue: .red, alpha: .one)).unsafelyUnwrapped
+                                      swizzle: .init(red: .red,
+                                                     green: .red,
+                                                     blue: .red,
+                                                     alpha: .one)).unsafelyUnwrapped
             }
         })
     }
