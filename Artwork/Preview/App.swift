@@ -29,7 +29,10 @@ struct App: SwiftUI.App {
 //            Exhibit(artwork: Stitch())
 //            Exhibit(artwork: Raymarch())
 //            Exhibit(artwork: Billboard.Screen())
-            Exhibit(artwork: WaveEq2D(size: .init(256, 256)))
+//            Exhibit(artwork: WaveEq2D(size: .init(256, 256)))
+            try!Exhibit(artwork: NBody2D(device: MTLCreateSystemDefaultDevice().unsafelyUnwrapped,
+                                         object: repeatElement(0.1 ... 1.0, count: 64).map(Float32.random(in:)),
+                                         length: 1024))
         }
     }
 }
