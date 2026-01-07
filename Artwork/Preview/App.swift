@@ -75,10 +75,7 @@ extension Visualise.AxesXY {
         y = [:]
     }
 }
-extension Visualise.AxesXY: `2DArtwork` {
-    public var colour: MTLClearColor {
-        .init(red: 0, green: 0, blue: 1, alpha: 1)
-    }
+extension Visualise.AxesXY: MTLArtwork.`Protocol` {
     public func callAsFunction(as format: MTLPixelFormat, in residency: any MTLResidencySet, signal: some Publisher<(SIMD2<Double>, any Gesture), Never>) throws -> @Sendable (CFTimeInterval, any MTL4RenderCommandEncoder) -> Void {
         let device = residency.device
         let library = try device.makeDefaultLibrary(bundle: .module)
