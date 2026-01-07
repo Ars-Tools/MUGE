@@ -120,7 +120,6 @@ extension Canvas: NSViewControllerRepresentable {
             return.none
         }
         context.coordinator.screen.drawableSize = .init(width: width, height: height)
-        print(context.coordinator.screen.drawableSize)
         return.some(context.coordinator.screen.drawableSize)
     }
 }
