@@ -25,11 +25,98 @@ extension MTLClearColor: Artwork {
         }
     }
 }
+public protocol `2DArtwork`: Artwork {
+    @inlinable
+    var stencil: Optional<UInt32> { get }
+    @inlinable
+    var colour: MTLClearColor { get }
+    @inlinable
+    func callAsFunction(as format: MTLPixelFormat, in residency: MTLResidencySet, signal: some Publisher<(SIMD2<Float64>, Gesture), Never>) throws -> @Sendable (CFTimeInterval, MTL4RenderCommandEncoder) -> Void
+}
+extension `2DArtwork` {
+    @inlinable
+    public var stencil: Optional<UInt32> { nil }
+    @inlinable
+    public var colour: MTLClearColor { .init(red: 0, green: 0, blue: 0, alpha: 1) }
+    @inlinable
+    public func callAsFunction(as format: MTLPixelFormat, in residency: any MTLResidencySet, signal: some Publisher<(SIMD2<Float64>, Gesture), Never>) throws -> @Sendable (CFTimeInterval, any MTL4CommandBuffer, any MTLTexture) -> Void {
+        let drawer = try callAsFunction(as: format, in: residency, signal: signal)
+        switch stencil {
+        case.some(let stencil):
+            fatalError()
+        case.none:
+            return { [colour] in
+                let descriptor = MTL4RenderPassDescriptor()
+                descriptor.colorAttachments[0].texture = $2
+                descriptor.colorAttachments[0].loadAction = .clear
+                descriptor.colorAttachments[0].storeAction = .store
+                descriptor.colorAttachments[0].clearColor = colour
+                if case.some(let encoder) = $1.makeRenderCommandEncoder(descriptor: descriptor) {
+                    drawer($0, encoder)
+                    encoder.endEncoding()
+                }
+            }
+        }
+    }
+}
+
+
 public protocol MTLArtwork: Artwork {
+    @inlinable
+    var stencil: UInt32 { get }
+    @inlinable
+    var colour: MTLClearColor { get }
+    @inlinable
+    var depth: Float64 { get }
+    @inlinable
+    func callAsFunction(as format: MTLPixelFormat, in residency: MTLResidencySet, signal: some Publisher<(SIMD2<Float64>, Gesture), Never>) throws -> @Sendable (CFTimeInterval, MTL4RenderCommandEncoder) -> Void
+}
+extension MTLArtwork {
+    @inlinable
+    public var stencil: UInt32 { 0 }
+    @inlinable
+    public var colour: MTLClearColor { .init(red: 0, green: 0, blue: 0, alpha: 1) }
+    @inlinable
+    public var depth: Float64 { 1 }
+}
+extension MTLArtwork {
+    public func callAsFunction(as format: MTLPixelFormat, in residency: any MTLResidencySet, signal: some Publisher<(SIMD2<Float64>, Gesture), Never>) throws -> @Sendable (CFTimeInterval, any MTL4CommandBuffer, any MTLTexture) -> Void {
+        let additional = MTLHeapDescriptor()
+        additional.storageMode = .private
+        additional.size = 15_360 * 8_640 * 8 * 3
+        guard case.some(let memory) = residency.device.makeHeap(descriptor: additional) else {
+            throw MTLLibraryError(.internal)
+        }
+        residency.addAllocation(memory)
+        let drawer = try callAsFunction(as: format, in: residency, signal: signal)
+        return { [stencil, colour, depth] in
+            let optional = .texture2DDescriptor(pixelFormat: .depth32Float_stencil8,
+                                                width: $2.width,
+                                                height: $2.height,
+                                                mipmapped: false) as MTLTextureDescriptor
+            optional.usage = .renderTarget
+            let texture = memory.makeTexture(descriptor: optional)
+            let descriptor = MTL4RenderPassDescriptor()
+            descriptor.colorAttachments[0].texture = $2
+            descriptor.colorAttachments[0].loadAction = .clear
+            descriptor.colorAttachments[0].storeAction = .store
+            descriptor.colorAttachments[0].clearColor = colour
+            descriptor.stencilAttachment.clearStencil = stencil
+            descriptor.stencilAttachment.texture = texture
+            descriptor.depthAttachment.clearDepth = depth
+            descriptor.depthAttachment.texture = texture
+            if case.some(let encoder) = $1.makeRenderCommandEncoder(descriptor: descriptor) {
+                drawer($0, encoder)
+                encoder.endEncoding()
+            }
+        }
+    }
+}
+public protocol MTXArtwork: Artwork {
     @inlinable
     func callAsFunction(in residency: MTLResidencySet, signal: some Publisher<(SIMD2<Float64>, Gesture), Never>) throws -> (MTLTextureDescriptor, @Sendable (CFTimeInterval, MTL4CommandBuffer) -> MTLTexture)
 }
-extension MTLArtwork {
+extension MTXArtwork {
     public func callAsFunction(as format: MTLPixelFormat, in residency: any MTLResidencySet, signal: some Publisher<(SIMD2<Float64>, Gesture), Never>) throws -> @Sendable (CFTimeInterval, any MTL4CommandBuffer, any MTLTexture) -> Void {
         let (descriptor, generator) = try callAsFunction(in: residency, signal: signal)
         let w = Float64(descriptor.width)
