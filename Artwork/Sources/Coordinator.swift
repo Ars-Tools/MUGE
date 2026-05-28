@@ -4,11 +4,11 @@
 //
 //  Created by Kota on 12/3/25.
 //
-import SwiftUI
-import Metal
+@preconcurrency import SwiftUI
+@preconcurrency import Metal
 @preconcurrency import typealias Combine.PassthroughSubject
 @usableFromInline
-final class Coordinator {
+final class Coordinator: Sendable {
     @usableFromInline let screen: CAMetalLayer
     @usableFromInline let allocators: Array<MTL4CommandAllocator>
     @usableFromInline let buffer: MTL4CommandBuffer
