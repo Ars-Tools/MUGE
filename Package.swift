@@ -31,7 +31,8 @@ let package = Package(
         ),
         .target(
             name: "Artwork",
-            path: "Artwork/Sources"
+            path: "Artwork/Sources",
+            resources: [.process("Blit.metal")]
         ),
         .target(
             name: "AVArtwork",
